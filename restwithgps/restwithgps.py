@@ -230,13 +230,6 @@ def _mark_stops(map: folium.Map, stop_points: list[StopPoint]) -> None:
         ).add_to(map)
 
 
-def get_center_of_route(route: list[tuple[float, float]]) -> tuple[float, float]:
-    lats = [_[0] for _ in route]
-    longs = [_[1] for _ in route]
-
-    return ((min(lats) + max(lats)) / 2, (min(longs) + max(longs)) / 2)
-
-
 def get_bounds_of_route(route: list[tuple[float, float]]) -> tuple[tuple[float, float], tuple[float, float]]:
     lats = [_[0] for _ in route]
     longs = [_[1] for _ in route]
@@ -245,8 +238,6 @@ def get_bounds_of_route(route: list[tuple[float, float]]) -> tuple[tuple[float, 
 
 
 def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], filepath="map"):
-    center_location = get_center_of_route(route)
-    # map = folium.Map(location=center_location, zoom_start=8)
     map = folium.Map()
     map.fit_bounds(get_bounds_of_route(route))
 
@@ -256,7 +247,7 @@ def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], fil
     map.save(filepath + ".html")
 
 
-def rest_with_gps(filepath: str) -> str:
+def rest_with_gps(filepath: str):
     point_stream = PointStreamFit(filepath)
     # point_stream = PointStreamStrava("ma-tana.fit")
 
