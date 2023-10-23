@@ -8,6 +8,7 @@ authors = ["HIRANO Yoshitaka <yo@hirano.cc>"]
 python = "^3.10"
 fitparse = "^1.2.0"
 folium = "^0.14.0"
+timezonefinder = "^6.2.0"
 
 
 [tool.poetry.dev-dependencies]

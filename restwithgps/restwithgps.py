@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import datetime
 from math import sin, cos, acos, radians, atan2
 import json
+from zoneinfo import ZoneInfo
+from timezonefinder import TimezoneFinder
 
 import fitparse
 import folium
@@ -11,7 +13,7 @@ import folium
 TO_DEGREE = 180.0 / (2**31)
 POINT_INTERVAL_TIME = datetime.timedelta(seconds=10)
 MIN_SPEED = 5.0
-TIME_ZONE_DIFF = datetime.timedelta(hours=2)
+tf = TimezoneFinder()
 
 earth_rad = 6378.137
 
@@ -66,17 +68,22 @@ class AbstractPointStream(object):
         self.filepath = filepath
         self._prev_timestamp: Optional[datetime.datetime] = None
         self._points: list[Point] = []
+        self._utc_offset: Optional[datetime.timedelta] = None
 
     def _get_point(self) -> Generator[Point, None, None]:
         pass
 
     def get_point(self) -> Generator[Point, None, None]:
         for point in self._get_point():
+            if not self._utc_offset:
+                timezone = ZoneInfo(tf.timezone_at(lng=point.longitude, lat=point.latitude))
+                self._utc_offset = timezone.utcoffset(point.timestamp)
+
             if not self._points or (point.timestamp - self._points[0].timestamp) < POINT_INTERVAL_TIME:
                 self._points.append(point)
             else:
                 yield Point(
-                    self._points[0].timestamp,
+                    self._points[0].timestamp + self._utc_offset,
                     sum([_.latitude for _ in self._points]) / len(self._points),
                     sum([_.longitude for _ in self._points]) / len(self._points),
                 )
@@ -84,7 +91,7 @@ class AbstractPointStream(object):
 
         if self._points:
             yield Point(
-                self._points[0].timestamp,
+                self._points[0].timestamp + self._utc_offset,
                 sum([_.latitude for _ in self._points]) / len(self._points),
                 sum([_.longitude for _ in self._points]) / len(self._points),
             )
@@ -154,13 +161,13 @@ def get_stop_points(point_stream: AbstractPointStream) -> tuple[list[StopPoint],
             if speed < MIN_SPEED:  # Stopping
                 if stop_point:
                     # If already stopped, extend stop time
-                    stop_point.end_time = point.timestamp + TIME_ZONE_DIFF
+                    stop_point.end_time = point.timestamp
                 else:
                     stop_point = StopPoint(
                         point.latitude,
                         point.longitude,
-                        point.timestamp + TIME_ZONE_DIFF,
-                        point.timestamp + TIME_ZONE_DIFF,
+                        point.timestamp,
+                        point.timestamp,
                     )
 
             else:  # Moving
