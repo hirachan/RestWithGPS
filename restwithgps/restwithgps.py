@@ -33,10 +33,13 @@ def to_degree(semicircle: int) -> float:
     return semicircle * TO_DEGREE
 
 earth_rad = 6378.137
+
+
 def _latlng_to_xyz(lat: float, lng: float) -> tuple[float, float, float]:
     rlat, rlng = radians(lat), radians(lng)
     coslat = cos(rlat)
     return coslat * cos(rlng), coslat * sin(rlng), sin(rlat)
+
 
 def get_distance(pos0: tuple[float, float], pos1: tuple[float, float], radious: float = earth_rad) -> float:
     if pos0 == pos1:
@@ -224,8 +227,16 @@ def _mark_stops(map: folium.Map, stop_points: list[StopPoint]) -> None:
         ).add_to(map)
 
 
+def get_center_of_route(route: list[tuple[float, float]]) -> tuple[float, float]:
+    lats = [_[0] for _ in route]
+    longs = [_[1] for _ in route]
+
+    return ((min(lats) + max(lats)) / 2, (min(longs) + max(longs)) / 2)
+
+
 def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], filepath="map"):
-    map = folium.Map(location=[48.347, -1.199], zoom_start=8)
+    center_location = get_center_of_route(route)
+    map = folium.Map(location=center_location, zoom_start=8)
 
     _draw_route(map, route)
     _mark_stops(map, stop_points)
