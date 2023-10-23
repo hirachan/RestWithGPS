@@ -234,12 +234,22 @@ def get_center_of_route(route: list[tuple[float, float]]) -> tuple[float, float]
     return ((min(lats) + max(lats)) / 2, (min(longs) + max(longs)) / 2)
 
 
+def get_bounds_of_route(route: list[tuple[float, float]]) -> tuple[tuple[float, float], tuple[float, float]]:
+    lats = [_[0] for _ in route]
+    longs = [_[1] for _ in route]
+
+    return ((min(lats), min(longs)), (max(lats), max(longs)))
+
+
 def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], filepath="map"):
     center_location = get_center_of_route(route)
-    map = folium.Map(location=center_location, zoom_start=8)
+    # map = folium.Map(location=center_location, zoom_start=8)
+    map = folium.Map()
+    map.fit_bounds(get_bounds_of_route(route))
 
     _draw_route(map, route)
     _mark_stops(map, stop_points)
+
 
     map.save(filepath + ".html")
 
