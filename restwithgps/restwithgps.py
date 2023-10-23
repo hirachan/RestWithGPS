@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Generator, Optional
+from typing import Generator, Optional, cast
 from dataclasses import dataclass
 import datetime
 from math import sin, cos, acos, radians, atan2
@@ -11,7 +11,6 @@ import folium
 TO_DEGREE = 180.0 / (2**31)
 POINT_INTERVAL_TIME = datetime.timedelta(seconds=10)
 MIN_SPEED = 5.0
-MIN_STOP = datetime.timedelta(minutes=5)
 TIME_ZONE_DIFF = datetime.timedelta(hours=2)
 
 earth_rad = 6378.137
@@ -98,18 +97,18 @@ class PointStreamFit(AbstractPointStream):
             point_dict: dict[str, int | float | str | datetime.datetime] = {}
             for data in record:
                 if data.units == "semicircles":
-                    data.units = "degrees"
                     if data.value is None:
                         continue
+                    # data.units = "degrees"
                     data.value = to_degree(data.value)
 
                 point_dict[data.name] = data.value
 
             if "position_lat" in point_dict and "position_long" in point_dict:
                 yield Point(
-                    point_dict["timestamp"],
-                    point_dict["position_lat"],
-                    point_dict["position_long"]
+                    cast(datetime.datetime, point_dict["timestamp"]),
+                    cast(float, point_dict["position_lat"]),
+                    cast(float, point_dict["position_long"])
                 )
 
 
@@ -203,9 +202,11 @@ def elapsed_time_to_str(elapsed_time: int) -> str:
     return s_elapsed_time
 
 
-def _mark_stops(map: folium.Map, stop_points: list[StopPoint]) -> None:
+def _mark_stops(map: folium.Map, stop_points: list[StopPoint], min_stop: int = 5) -> None:
+    _min_stop = datetime.timedelta(minutes=min_stop)
+
     for stop_point in stop_points:
-        if stop_point.end_time - stop_point.start_time < MIN_STOP:
+        if stop_point.end_time - stop_point.start_time < _min_stop:
             continue
 
         start_time = stop_point.start_time.strftime("%d/%H:%M")
@@ -237,20 +238,20 @@ def get_bounds_of_route(route: list[tuple[float, float]]) -> tuple[tuple[float, 
     return ((min(lats), min(longs)), (max(lats), max(longs)))
 
 
-def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], filepath="map"):
+def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], filepath: str = "map", min_stop: int = 5):
     map = folium.Map()
     map.fit_bounds(get_bounds_of_route(route))
 
     _draw_route(map, route)
-    _mark_stops(map, stop_points)
+    _mark_stops(map, stop_points, min_stop)
 
     map.save(filepath + ".html")
 
 
-def rest_with_gps(filepath: str):
+def rest_with_gps(filepath: str, min_stop: int = 5):
     point_stream = PointStreamFit(filepath)
     # point_stream = PointStreamStrava("ma-tana.fit")
 
     stop_points, route = get_stop_points(point_stream)
 
-    draw_map(stop_points, route, filepath)
+    draw_map(stop_points, route, filepath, min_stop)
