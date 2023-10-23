@@ -14,6 +14,8 @@ MIN_SPEED = 5.0
 MIN_STOP = datetime.timedelta(minutes=5)
 TIME_ZONE_DIFF = datetime.timedelta(hours=2)
 
+earth_rad = 6378.137
+
 
 @dataclass
 class StopPoint:
@@ -21,6 +23,7 @@ class StopPoint:
     longitude: float
     start_time: datetime.datetime
     end_time: datetime.datetime
+
 
 @dataclass
 class Point:
@@ -31,8 +34,6 @@ class Point:
 
 def to_degree(semicircle: int) -> float:
     return semicircle * TO_DEGREE
-
-earth_rad = 6378.137
 
 
 def _latlng_to_xyz(lat: float, lng: float) -> tuple[float, float, float]:
@@ -61,17 +62,14 @@ def get_vector(pos0: tuple[float, float], pos1: tuple[float, float]) -> float:
     return atan2(pos1[0] - pos0[0], pos1[1] - pos0[1])
 
 
-
 class AbstractPointStream(object):
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
         self._prev_timestamp: Optional[datetime.datetime] = None
         self._points: list[Point] = []
 
-
     def _get_point(self) -> Generator[Point, None, None]:
         pass
-
 
     def get_point(self) -> Generator[Point, None, None]:
         for point in self._get_point():
@@ -133,6 +131,7 @@ class PointStreamStrava(AbstractPointStream):
                 latlng[1]
             )
 
+
 def get_speed_from_points(point1: Point, point2: Point) -> float:
     km = get_distance(
         (point1.latitude, point1.longitude),
@@ -141,6 +140,7 @@ def get_speed_from_points(point1: Point, point2: Point) -> float:
     speed = get_speed(km, second)
 
     return speed
+
 
 def get_stop_points(point_stream: AbstractPointStream) -> tuple[list[StopPoint], list[tuple[float, float]]]:
     stop_points: list[StopPoint] = []
@@ -183,13 +183,16 @@ def get_stop_points(point_stream: AbstractPointStream) -> tuple[list[StopPoint],
 
     return stop_points, route
 
+
 def _draw_route(map: folium.Map, route: list[tuple[float, float]]) -> None:
     folium.PolyLine(route, color="#e4007f").add_to(map)
+
 
 def get_elapsed_time(stop_point: StopPoint) -> int:
     elapsed_time = int((stop_point.end_time - stop_point.start_time).seconds / 60 + 0.5)
 
     return elapsed_time
+
 
 def elapsed_time_to_str(elapsed_time: int) -> str:
     if elapsed_time >= 60:
@@ -214,11 +217,11 @@ def _mark_stops(map: folium.Map, stop_points: list[StopPoint]) -> None:
         googlemap_link = f'<a href="{googlemap}" target="_blank" rel="noopener noreferrer">googlemap</a>'
 
         popup = folium.Popup(f"{start_time}-{end_time}\n{s_elapsed_time} {googlemap_link}",
-                                show=False)
+                             show=False)
 
         folium.Marker(location=[stop_point.latitude, stop_point.longitude],
-                        popup=popup
-                        ).add_to(map)
+                      popup=popup
+                      ).add_to(map)
 
         folium.CircleMarker(
             location=[stop_point.latitude, stop_point.longitude],
@@ -249,7 +252,6 @@ def draw_map(stop_points: list[StopPoint], route: list[tuple[float, float]], fil
 
     _draw_route(map, route)
     _mark_stops(map, stop_points)
-
 
     map.save(filepath + ".html")
 
